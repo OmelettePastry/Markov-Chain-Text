@@ -2,10 +2,18 @@ import mmap
 import random
 from pathlib import Path
 
+# notes
+#
+# - issue where last word in text may not have any transitions
+
 PUNCT = ("!", ",", ".", ";", "?", ":")
 
 def is_letter(char):
-    return (ord(char) >= 65 and ord(char) <= 90) or (ord(char) >= 97 and ord(char) <= 122) or ord(char) == 39
+    
+    if len(char) == 0:
+        return False
+    else:
+        return (ord(char) >= 65 and ord(char) <= 90) or (ord(char) >= 97 and ord(char) <= 122) or ord(char) == 39
 
 def is_punc(char):
     is_punctuation = False
@@ -22,7 +30,12 @@ def get_next_element(file_map, index, file_size):
     word = ""
     
     while(word_complete == False and index < file_size):
-        char = file_map[index:index + 1].decode("utf-8")
+
+        char = file_map[index:index + 1].decode("utf-8", "ignore")
+        
+        while (char == "") and (index < file_size):
+            index = index + 1
+            char = file_map[index:index + 1].decode("utf-8", "ignore")
         
         # if character is a letter, add to word
         if is_letter(char):
@@ -34,7 +47,7 @@ def get_next_element(file_map, index, file_size):
         elif (char == "-"):
 
             # if there is a dash (double hypen)
-            if index < file_size and (file_map[index + 1:index + 2].decode("utf-8") == "-"):
+            if (index < file_size - 1) and (file_map[index + 1:index + 2].decode("utf-8", "ignore") == "-"):
                 if len(word) > 0:
                     word_complete = True
                 else:
@@ -43,7 +56,7 @@ def get_next_element(file_map, index, file_size):
                     index = index + 2
 
             # if the hypen signals a hyphenated word, add character to word
-            elif index < file_size and is_letter(file_map[index + 1:index + 2].decode("utf-8")):
+            elif index < file_size and is_letter(file_map[index + 1:index + 2].decode("utf-8", "ignore")):
                 word = word + char
                 index = index + 1
 
@@ -64,8 +77,13 @@ def get_next_element(file_map, index, file_size):
         
         # if character is not a punctuation mark or letter     
         else:
-            word_complete = True
-            index = index + 1
+            if (index > 0 and is_letter(file_map[index - 1:index].decode("utf-8", "ignore"))):
+                word_complete = True
+                index = index + 1
+            else:
+                word_complete = True
+                word = None
+                index = index + 1
 
     return word, index
     
@@ -84,28 +102,31 @@ def get_words(filename):
     
         # get element and index value
         element, index = get_next_element(file_map, index, file_size)
-        # print(index)
-        if not (element in word_dict):
-            word_dict.update({element : {}})
-            # print(element)
-    
-        # block to add the current word to the previous word's dictionary
-        if (len(word_dict) > 1):
+        
+        if element != None:
             
-            # is current word in the previous word's dictionary?
-            if not (element in word_dict[original_element]):
-            
-                # if not, add it to the dict, with accumulator value of 1
-                word_dict[original_element].update({element : 1})
-            else:
-            
-                # if so, increment the word accumulator
-                value = word_dict[original_element][element]
-                value = value + 1
-                word_dict[original_element][element] = value
+            # print(index)
+            if not (element in word_dict):
+                word_dict.update({element : {}})
+                # print(element)
+        
+            # block to add the current word to the previous word's dictionary
+            if (len(word_dict) > 1):
                 
-        # save word for next iteration
-        original_element = element
+                # is current word in the previous word's dictionary?
+                if not (element in word_dict[original_element]):
+                
+                    # if not, add it to the dict, with accumulator value of 1
+                    word_dict[original_element].update({element : 1})
+                else:
+                
+                    # if so, increment the word accumulator
+                    value = word_dict[original_element][element]
+                    value = value + 1
+                    word_dict[original_element][element] = value
+                    
+            # save word for next iteration
+            original_element = element
     
     # calculate probabilities of words that appear before a certain word
     for i in word_dict:
@@ -133,10 +154,18 @@ def create_sentence(word_dict):
         word_set.add(key[0])
     
     # randomly select a word from the word set (all with equal probabilities)
+    
     word = random.choice(list(word_set))
-    sentence = sentence + str(word) + " "
+    
+    while not(ord(word[0]) >= 65 and ord(word[0]) <= 90):
+        word = random.choice(list(word_set))
+        
+    
+    sentence = sentence + str(word)
     weights = []
     end = False
+    period_counter = 0
+    prev_word = ""
     
     while end == False:
         sub_word_list = []
@@ -163,25 +192,34 @@ def create_sentence(word_dict):
         # word = random.choices(list(word_dict[word].items()), weights, k=1)[0][0]
 
         if word == " ":
-            print("space")
+            print("[space]")
             
-        if is_punc(word):
+        if is_punc(word) or word == "--":
             sentence = sentence + word
         elif word != "" and word != " ":
-            sentence = sentence + " " + word
+            if prev_word == "--":
+                sentence = sentence + word
+            else:
+                sentence = sentence + " " + word
             
-        if word == ".":
+        if (word == ".") or (word == "?") or (word == "!"):
+            period_counter = period_counter + 1
+        if period_counter > 0:
             end = True
+            
+        prev_word = word
         
     return sentence
 
 def main():
 
-    word_dict = get_words("text.txt")
+    word_dict = get_words("text-5.txt")
     # for key in word_dict.items():
         # print(key, end = " ")
     
     # print()
     print(create_sentence(word_dict))
+
+    # print(word_dict['.'])
 
 main()
