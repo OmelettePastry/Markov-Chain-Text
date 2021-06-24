@@ -174,57 +174,51 @@ def get_words(filename):
 
     return word_dict;
 
-# creates sentences using a markov chain  
+# This function creates sentences using a markov chain
+#   This function creates a sentence from the word dictionary by first randomly
+#   selecting a primary word from the word dictionary. Subsequent words are then
+#   selected from the second-level dictionary of that particular word, according
+#   to their appropriate probabilities.
+
 def create_sentence(word_dict):
-    
+
     sentence = ""
-    word_set = set()
+    word_set = []
     
-    # create a set of keys from the word dictionary
+    # random.choice requires a list
     for key in word_dict.items():
-        word_set.add(key[0])
+        word_set.append(key[0])
     
-    # randomly select a word from the word set (all with equal probabilities)
+    word = random.choice(word_set)
     
-    word = random.choice(list(word_set))
-    
+    # Ensure the first word is an actual word (no punctuation)
     while not(ord(word[0]) >= 65 and ord(word[0]) <= 90):
         word = random.choice(list(word_set))
         
-    
+    # We can begin constructing our sentence
     sentence = sentence + str(word)
     weights = []
     end = False
-    period_counter = 0
+    period_counter = 0                      # Used to determine how many sentences we want
     prev_word = ""
     
     while end == False:
         sub_word_list = []
         weights = []
         
+        # Prepare weights and word list
         for key in word_dict[word].items():
             sub_word_list.append(key[0])
-
-        # print(word_dict[word])
-        # print(*sub_word_list)
         
-        # create a weights list to hold weights of associated sub words
         for j in word_dict[word]:
             weights.append(word_dict[word][j])
-        
-        # print(*weights)
-        # print(len(weights), len(sub_word_list))
-        
-        # choose next word from the distribution
 
         word = random.choices(sub_word_list, weights, k=1)[0]
                 
         # alternate use
         # word = random.choices(list(word_dict[word].items()), weights, k=1)[0][0]
-
-        if word == " ":
-            print("[space]")
-            
+           
+        # Determine is a space is needed
         if is_punc(word) or word == "--":
             sentence = sentence + word
         elif word != "" and word != " ":
@@ -233,24 +227,20 @@ def create_sentence(word_dict):
             else:
                 sentence = sentence + " " + word
             
+        # Sentence limit for output
         if (word == ".") or (word == "?") or (word == "!"):
             period_counter = period_counter + 1
         if period_counter > 0:
             end = True
-            
+
         prev_word = word
         
     return sentence
 
 def main():
 
-    word_dict = get_words("text-4.txt")
-    # for key in word_dict.items():
-        # print(key, end = " ")
-    
-    # print()
-    print(create_sentence(word_dict))
+    word_dict = get_words("text.txt")
 
-    # print(word_dict['.'])
+    print(create_sentence(word_dict))
 
 main()

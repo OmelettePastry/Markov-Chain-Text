@@ -1,4 +1,4 @@
 # Markov-Chain-Text
 Generating sentences using a Markov Chain
 
-This program reads a text file and stores all unique words to a dictionary and uses a Markov Chain to determine what word should come next. The probabilities of whatever word occurs next is determined by the probability that it occurs in the text file.
+This program reads a text file and stores all unique words in a dictionary, as well as the words that succeed them (with their probabilities) in a Markov chain. This Markov chain is then used to create a sentence based on the probabilities of a successive word.
