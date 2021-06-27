@@ -10,7 +10,7 @@ from pathlib import Path
 PUNCT = ("!", ",", ".", ";", "?", ":")
 
 def is_letter(char):
-    
+
     if len(char) == 0:
         return False
     else:
@@ -30,21 +30,15 @@ def is_punc(char):
 #   The function reads each character sequentially and determines how to process each
 #   character/wrod depending on the value of a preceding or succeeding character
 def get_next_element(file_map, index, file_size):
-    
+
     word_complete = False   # This vairable will be True once a whole word is read
     word = ""
-    
+
     # This section loops until a separate, complete word is found or until we reach the end of the file
     while(word_complete == False and index < file_size):
 
         char = file_map[index:index + 1].decode("utf-8", "ignore")
-        
-        """ DO WE NEED THIS
-        while (char == "") and (index < file_size):
-            index = index + 1
-            char = file_map[index:index + 1].decode("utf-8", "ignore")
-        """
-        
+
         # Determine if character is a letter, then add to word
         if is_letter(char):
             word = word + char
@@ -54,12 +48,12 @@ def get_next_element(file_map, index, file_size):
         elif (char == "-"):
 
             if (index < file_size - 1) and (file_map[index + 1:index + 2].decode("utf-8", "ignore") == "-"):
-                
+
                 # If it is a dash, and there was a word preceding it, mark the word complete. Do not imcrement,
                 #   as the next call to this function will pick it up.
                 if len(word) > 0:
                     word_complete = True
-                    
+
                 # Dash with no preceding word, add dash to dictionary, skip to next character
                 else:
                     word = "--"
@@ -79,26 +73,26 @@ def get_next_element(file_map, index, file_size):
 
         # Determine if the character is a punctuation mark
         elif (is_punc(char)):
-        
+
             # If there was a word before the punctuation mark (as length of word > 0), mark the word complete. Do not increment
             #   the index, as the next iteration will pick up the punctuation mark
             if len(word) > 0:
                 word_complete = True
-            
+
             # If there is no word before the punctuation mark, the word will be the punctuation mark
             else:
                 word = word + char
                 word_complete = True
                 index = index + 1
-        
+
         # Determine if the character is neither a letter or punctuation mark
         else:
-        
+
             # If the previous character is a letter, end the word
             if (index > 0 and is_letter(file_map[index - 1:index].decode("utf-8", "ignore"))):
                 word_complete = True
                 index = index + 1
-                
+
             # No previous word, then there is no word
             else:
                 word_complete = True
@@ -113,9 +107,9 @@ def get_next_element(file_map, index, file_size):
    second level dicitonary will be the number of times the word succeeds the word.
 
  Our dictionary:
- 
+
  word_dict = { word : { succ_word : number } }
- 
+
  1. word = the word in our text file
  2. succ_word = the word that come immeidately after 'word'
  3. number = number of times the 'succ_word' appeears after 'word'
@@ -130,23 +124,23 @@ def get_words(filename):
 
     word_dict = {}
     index = 0
-    original_element = "" 
+    original_element = None
 
     # Iterate through our file to find words
     while (index < file_size):
-    
+
         element, index = get_next_element(file_map, index, file_size)
-        
+
         if element != None:
-            
+ 
             # First-level dictionary processing
             if not (element in word_dict):
                 word_dict.update({element : {}})
-        
-            # Once athere is a word in our first-level dictionary, the succeeding word will be stored in the
+
+            # Once there is a word in our first-level dictionary, the succeeding word will be stored in the
             #   sub-dictionary
-            if (len(word_dict) > 1):
-                
+            if (original_element != None):
+
                 # Determine if the word is not already in our second-level dictionary, and process as necessary
                 if not (element in word_dict[original_element]):
                     word_dict[original_element].update({element : 1})
@@ -154,22 +148,22 @@ def get_words(filename):
                     value = word_dict[original_element][element]
                     value = value + 1
                     word_dict[original_element][element] = value
-                    
+
             # save word for next iteration
             original_element = element
-    
+
     # Calculate the probabilities of words that come after another word
     for i in word_dict:
-    
+
         total = 0
-        
+
         for j in word_dict[i]:
             total = total + word_dict[i][j]
-            
+
         for k in word_dict[i]:
             probability = word_dict[i][k] / total
             word_dict[i][k] = probability
-        
+
     file_object.close()
 
     return word_dict;
@@ -184,40 +178,40 @@ def create_sentence(word_dict):
 
     sentence = ""
     word_set = []
-    
+
     # random.choice requires a list
     for key in word_dict.items():
         word_set.append(key[0])
-    
+
     word = random.choice(word_set)
-    
+
     # Ensure the first word is an actual word (no punctuation)
     while not(ord(word[0]) >= 65 and ord(word[0]) <= 90):
         word = random.choice(list(word_set))
-        
+
     # We can begin constructing our sentence
     sentence = sentence + str(word)
     weights = []
     end = False
     period_counter = 0                      # Used to determine how many sentences we want
     prev_word = ""
-    
+
     while end == False:
         sub_word_list = []
         weights = []
-        
+
         # Prepare weights and word list
         for key in word_dict[word].items():
             sub_word_list.append(key[0])
-        
+
         for j in word_dict[word]:
             weights.append(word_dict[word][j])
 
         word = random.choices(sub_word_list, weights, k=1)[0]
-                
+
         # alternate use
         # word = random.choices(list(word_dict[word].items()), weights, k=1)[0][0]
-           
+
         # Determine is a space is needed
         if is_punc(word) or word == "--":
             sentence = sentence + word
@@ -226,7 +220,7 @@ def create_sentence(word_dict):
                 sentence = sentence + word
             else:
                 sentence = sentence + " " + word
-            
+
         # Sentence limit for output
         if (word == ".") or (word == "?") or (word == "!"):
             period_counter = period_counter + 1
@@ -234,7 +228,7 @@ def create_sentence(word_dict):
             end = True
 
         prev_word = word
-        
+
     return sentence
 
 def main():
